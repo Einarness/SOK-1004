@@ -26,7 +26,7 @@ Vi betegner endringen over tolv måneder i KPI ved $P_{t}-P_{t-12} := \Delta P_{
 
 $$
 \Delta P_{t}=\sum_{i=1}^{n} v_{i,t} p_{i,t}-\sum_{i=1}^{n} v_{i,t-12} p_{i,t-12}=\sum_{i=1}^{n} \Delta (v_{i,t} p_{i,t}).\hspace{1cm}(2)
-$$
+$$\
 
 Merk at både vektene og prisene kan endre seg fra $t-12$ til $t$. I praksis vil vektene endre seg lite. For å forenkle fremstillingen vil vi anta at $v_{i,t}=v_{i,t-12}$. I tillegg så deler vi uttrykket på $P_{t-12}$, og ganger med $100$. Da har vi
 
@@ -38,7 +38,7 @@ På venstre side av likhetstegnet har vi prosentvis tolvmåneders endring i kons
 
 $$
 100 \times \frac{v_{i,t-12} \times \Delta p_{i,t}}{P_{t-12}}. \hspace{1cm} (4)
-$$
+$$\
 
 Tolk ligning $(4)$. Gi en konkret forklaring på hva tallet representerer.
 
@@ -207,7 +207,14 @@ Nå er det deres tur til å rydde. Slett variablene `year` og `month`. Gi variab
 
 ```{r}
 # løs oppgave II her
-df
+df <- df %>% 
+  subset(select = -c(year, month)) %>% 
+  rename(verdi=value) %>% 
+  rename(kpi=statistikkvariabel) %>% 
+  filter(dato>as.Date("2010-12-31"))
+df[is.na(df)] <- 0
+  
+
 ```
 
 # Oppgave III: Beregn et vektet gjennomsnitt
@@ -220,6 +227,14 @@ Del vektene i `df` på 1000, og sjekk at de summerer seg til om lag `1` for hver
 
 ```{r}
 # besvar oppgave IIIa her
+df_ny <- df %>% 
+  pivot_wider(names_from = konsumgruppe, values_from = verdi)
+
+df_vekter <- df_ny[-c(0:141), ]
+df_vekter <- df_vekter %>% 
+  mutate(Total_pertusen = rowSums(.[3:95])/1000) %>% 
+  relocate("Total_pertusen", .after="dato")
+  
 ```
 
 ## Oppgave IIIb: Beregn prisindeksen fra gruppene med vekter
@@ -228,6 +243,11 @@ Beregn en totalindeks hvor dere bruker vektene og verdiene på prisindeks i form
 
 ```{r}
 # besvar oppgave IIIb her
+df_ny <- df_ny %>% 
+  mutate(totalindeks = rowSums(.[3:95])/1000) %>%
+  relocate("total_pertusen", .after="dato")
+
+
 ```
 
 *\[Besvar oppgave IIIb her\]*
@@ -238,6 +258,7 @@ Lag en figur som illustrerer vekstbidraget til konsumgruppen "Elektrisitet, inkl
 
 ```{r}
 # Besvar oppgave IV her
+
 ```
 
 *\[Besvar oppgave IV her.\]*
