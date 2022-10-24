@@ -18,7 +18,7 @@ For å forstå øvelsen skal vi først se nærmere på hvordan en prisindeks byg
 
 $$
 P_{t}=\sum_{i=1}^{n}v_{i,t}p_{i,t} \hspace{1cm} (1)
-$$
+$$\
 
 hvor vektene summerer til én i hver periode \$t\$, $\sum_{i=1}^{n}v_{i,t}=1$. Vi vil se på månedlig KPI på undergruppenivå, hvor $n=93$ og $t$ løper fra januar 1979 til august 2022.
 
@@ -27,6 +27,7 @@ Vi betegner endringen over tolv måneder i KPI ved $P_{t}-P_{t-12} := \Delta P_{
 $$
 \Delta P_{t}=\sum_{i=1}^{n} v_{i,t} p_{i,t}-\sum_{i=1}^{n} v_{i,t-12} p_{i,t-12}=\sum_{i=1}^{n} \Delta (v_{i,t} p_{i,t}).\hspace{1cm}(2)
 $$\
+\
 
 Merk at både vektene og prisene kan endre seg fra $t-12$ til $t$. I praksis vil vektene endre seg lite. For å forenkle fremstillingen vil vi anta at $v_{i,t}=v_{i,t-12}$. I tillegg så deler vi uttrykket på $P_{t-12}$, og ganger med $100$. Da har vi
 
@@ -55,7 +56,8 @@ library(lubridate)
 library(rjstat)
 library(janitor)
 library(gdata)
-library(httr) 
+library(httr)
+library(dplyr)
 ```
 
 Vi bruker dataene fra [Tabell 0313: Konsumprisindeksen fra SSB](https://www.ssb.no/priser-og-prisindekser/konsumpriser/statistikk/konsumprisindeksen). Jeg laster ned ved hjelp av API. Se [brukerveiledningen](https://www.ssb.no/api/pxwebapi/_/attachment/inline/019c05e0-35ad-4757-87a0-ba7fbf4a68e2:46a164479bc10a67eee4b472cd891f001ca19da5/Api_brukerveiledning.pdf) her.
@@ -213,6 +215,7 @@ df <- df %>%
   rename(kpi=statistikkvariabel) %>% 
   filter(dato>as.Date("2010-12-31"))
 df[is.na(df)] <- 0
+
   
 
 ```
@@ -227,14 +230,16 @@ Del vektene i `df` på 1000, og sjekk at de summerer seg til om lag `1` for hver
 
 ```{r}
 # besvar oppgave IIIa her
+
 df_ny <- df %>% 
   pivot_wider(names_from = konsumgruppe, values_from = verdi)
+df_ny[is.na(df_ny)] <- 0
 
-df_vekter <- df_ny[-c(0:141), ]
-df_vekter <- df_vekter %>% 
-  mutate(Total_pertusen = rowSums(.[3:95])/1000) %>% 
+df_vekt <- df_ny %>%
+  filter(kpi == "Konsumprisindeks (vekter)")
+df_vektene <- df_vekt %>%
+  mutate(Total_pertusen = rowSums(.[3:95]/1000)) %>%
   relocate("Total_pertusen", .after="dato")
-  
 ```
 
 ## Oppgave IIIb: Beregn prisindeksen fra gruppene med vekter
@@ -243,12 +248,232 @@ Beregn en totalindeks hvor dere bruker vektene og verdiene på prisindeks i form
 
 ```{r}
 # besvar oppgave IIIb her
-df_ny <- df_ny %>% 
-  mutate(totalindeks = rowSums(.[3:95])/1000) %>%
-  relocate("total_pertusen", .after="dato")
 
+df_verdi <- df_ny %>%
+  filter(kpi == "Konsumprisindeks (2015=100)")
 
+df_vekt <- select(df_vekt,-kpi,-dato)
+df_vekt <- df_vekt/1000
+df_verdi <- select(df_verdi,-kpi,-dato)
+
+df_totalindeks <- df_vekt * df_verdi
+df_totalindeks <- df_totalindeks %>% 
+  mutate(Total = rowSums(df_totalindeks)) %>%
+  relocate("Total", .before="Brød og kornprodukter")
+
+df_indeks <- select(df_vektene,kpi,dato)
+df_totalindeks <- cbind(df_indeks, df_totalindeks)
 ```
+
+```{r}
+url <- "https://data.ssb.no/api/v0/no/table/03013/"
+
+query <- '{
+  "query": [
+    {
+      "code": "Konsumgrp",
+      "selection": {
+        "filter": "vs:CoiCop2016niva1",
+        "values": [
+          "TOTAL"
+        ]
+      }
+    },
+    {
+      "code": "Tid",
+      "selection": {
+        "filter": "item",
+        "values": [
+          "2011M01",
+          "2011M02",
+          "2011M03",
+          "2011M04",
+          "2011M05",
+          "2011M06",
+          "2011M07",
+          "2011M08",
+          "2011M09",
+          "2011M10",
+          "2011M11",
+          "2011M12",
+          "2012M01",
+          "2012M02",
+          "2012M03",
+          "2012M04",
+          "2012M05",
+          "2012M06",
+          "2012M07",
+          "2012M08",
+          "2012M09",
+          "2012M10",
+          "2012M11",
+          "2012M12",
+          "2013M01",
+          "2013M02",
+          "2013M03",
+          "2013M04",
+          "2013M05",
+          "2013M06",
+          "2013M07",
+          "2013M08",
+          "2013M09",
+          "2013M10",
+          "2013M11",
+          "2013M12",
+          "2014M01",
+          "2014M02",
+          "2014M03",
+          "2014M04",
+          "2014M05",
+          "2014M06",
+          "2014M07",
+          "2014M08",
+          "2014M09",
+          "2014M10",
+          "2014M11",
+          "2014M12",
+          "2015M01",
+          "2015M02",
+          "2015M03",
+          "2015M04",
+          "2015M05",
+          "2015M06",
+          "2015M07",
+          "2015M08",
+          "2015M09",
+          "2015M10",
+          "2015M11",
+          "2015M12",
+          "2016M01",
+          "2016M02",
+          "2016M03",
+          "2016M04",
+          "2016M05",
+          "2016M06",
+          "2016M07",
+          "2016M08",
+          "2016M09",
+          "2016M10",
+          "2016M11",
+          "2016M12",
+          "2017M01",
+          "2017M02",
+          "2017M03",
+          "2017M04",
+          "2017M05",
+          "2017M06",
+          "2017M07",
+          "2017M08",
+          "2017M09",
+          "2017M10",
+          "2017M11",
+          "2017M12",
+          "2018M01",
+          "2018M02",
+          "2018M03",
+          "2018M04",
+          "2018M05",
+          "2018M06",
+          "2018M07",
+          "2018M08",
+          "2018M09",
+          "2018M10",
+          "2018M11",
+          "2018M12",
+          "2019M01",
+          "2019M02",
+          "2019M03",
+          "2019M04",
+          "2019M05",
+          "2019M06",
+          "2019M07",
+          "2019M08",
+          "2019M09",
+          "2019M10",
+          "2019M11",
+          "2019M12",
+          "2020M01",
+          "2020M02",
+          "2020M03",
+          "2020M04",
+          "2020M05",
+          "2020M06",
+          "2020M07",
+          "2020M08",
+          "2020M09",
+          "2020M10",
+          "2020M11",
+          "2020M12",
+          "2021M01",
+          "2021M02",
+          "2021M03",
+          "2021M04",
+          "2021M05",
+          "2021M06",
+          "2021M07",
+          "2021M08",
+          "2021M09",
+          "2021M10",
+          "2021M11",
+          "2021M12",
+          "2022M01",
+          "2022M02",
+          "2022M03",
+          "2022M04",
+          "2022M05",
+          "2022M06",
+          "2022M07",
+          "2022M08",
+          "2022M09"
+        ]
+      }
+    }
+  ],
+  "response": {
+    "format": "json-stat2"
+  }
+}'
+
+hent_indeksen.tmp <- url %>%
+  POST(body = query, encode = "json")
+
+df_API <-  hent_indeksen.tmp %>%
+  content("text") %>%
+  fromJSONstat() %>%
+  as_tibble()
+
+df_API <- df_API %>%
+separate(måned, 
+         into=c("year", "month"), 
+         sep="M") %>% 
+mutate(dato = ymd(paste(year, month, 1)))
+df_API <- df_API %>% 
+  subset(select = -c(year, month)) %>%
+  rename(verdi=value) %>% 
+  rename(kpi=statistikkvariabel)
+df_API[is.na(df_API)] <- 0
+df_API <- df_API %>%
+  pivot_wider(names_from = kpi, values_from = verdi)
+```
+
+```{r}
+#grafen og veridene i df_totalindeks blir lavere enn de skal være
+df_totalindeks %>%
+  ggplot(aes(x=dato, y= Total))+
+    geom_line()+
+  labs(x="dato", y="total") +
+  scale_y_continuous(labels = scales::comma)+
+  theme_bw()
+
+df_API %>%
+  ggplot(aes(x=dato, y= `Konsumprisindeks (2015=100)` ))+
+    geom_line()+
+  labs(x="dato", y="total")+
+  scale_y_continuous(labels = scales::comma)+
+  theme_bw()
+```
+
+Svært like grafer. Får ikke helt samme verdi på y-aksen, siden de konsumgruppene vi har brukt, kun er en undergruppe når det kommer til den fulle utregningen av KPI.
 
 *\[Besvar oppgave IIIb her\]*
 
@@ -257,7 +482,26 @@ df_ny <- df_ny %>%
 Lag en figur som illustrerer vekstbidraget til konsumgruppen "Elektrisitet, inkludert nettleie." Gi figuren en anstendig tolkning.
 
 ```{r}
-# Besvar oppgave IV her
+df_totalindeks <- df_totalindeks
+
+delta_P <- as.Date("2011-01-01")-as.Date("2010-01-01")
+```
+
+```{# Besvar oppgave IV her}
+#får ikke til
+merge(df_API, df_totalindeks) %>%
+  ggplot(aes(x=dato))+
+  geom_line(aes(y = `Elektrisitet inkludert nettleie`, color= "red"))+
+  geom_line(aes(y = `12-måneders endring (prosent)`, color= "blue"))+
+  labs(x="dato", y="prosent",
+         title="Vekstbidraget til konsumgruppene",
+         subtitle="Hva er vekstbidraget til konsumgruppen Elektrisitet, inkludert nettleie?", color = "")+
+  scale_y_continuous(labels = scales::comma)+
+  guides(color = "none")+
+  theme_bw()
+```
+
+```{r}
 
 ```
 
