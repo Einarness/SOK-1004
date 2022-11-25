@@ -10,7 +10,7 @@ cpi <- read_excel("C:/Users/einar/R studio/myrepo/Prosjektoppgave/cpi.xlsx",
 ```
 
 ```{r}
-cpi <- cpi[-c(1:334), ] 
+cpi <- cpi[-c(1:334), ] #sander er stygg
 ```
 
 ```{r}
