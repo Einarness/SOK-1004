@@ -129,9 +129,9 @@ df <-  hent_indeks.tmp %>%
 ```{r}
 df <- df %>% 
   rename(verdi=value) %>% 
-  rename(kostnader= statistikkvariabel ) %>% 
+  rename(svariabel= statistikkvariabel ) %>% 
   rename(naering=`næring (SN2007)`) %>% 
-  rename(ansatte= sysselsettingsgruppe) %>% 
+  rename(ssgruppe= sysselsettingsgruppe) %>% 
   mutate(verdi=verdi/1000)
 ```
 
@@ -145,17 +145,17 @@ Vi begrenser analysen til bedrifter med minst 20 ansatte og tall fra 2015 - 2020
 # besvar oppgave III her
 df_ny <- df %>%
   filter(between(år, 2015, 2020)) %>% 
-  filter(kostnader == "FoU-kostnader i alt") %>% 
-  mutate_at("ansatte", 
+  filter(svariabel == "FoU-kostnader i alt") %>% 
+  mutate_at("ssgruppe", 
             str_replace, "sysselsatte", "")
   
 df_ny <- df_ny [!(df_ny$naering == "Alle næringer"),]
 df_ny <- df_ny %>% 
-  pivot_wider(names_from = ansatte, 
+  pivot_wider(names_from = ssgruppe, 
               values_from = verdi )
 df_ny <- df_ny[-c(4,6)]
 df_ny <- df_ny %>% 
-  pivot_longer(4:8, names_to = "ansatte", 
+  pivot_longer(4:8, names_to = "ssgruppe", 
                values_to = "verdi" )
 
 df_ny %>%
@@ -163,10 +163,10 @@ df_ny %>%
   geom_histogram(binwidth = 2) +
   theme_minimal()+
   labs(title="Fordelingen av totale FoU-kostnader",
-       subtitle="Fordelt på type næring (farge) og antall ansatte (høyre y-akse)", 
+       subtitle="Fordelt på type næring og antall ansatte", 
        x="verdi i milliarder", 
        y = "Count")+
-  facet_grid(ansatte ~ naering)
+  facet_grid(ssgruppe ~ naering)
 ```
 
 # Oppgave IV: Undersøk fordelingen igjen
@@ -176,27 +176,28 @@ Kan du modifisere koden fra oppgave II til å i tillegg illustrere fordelingen a
 **Merknad.** Kommandoen `fill = [statistikkvariabel]` kan brukes i et histogram.
 
 ```{r}
+# besvar oppgave III her
 df1 <- df %>%
   filter(between(år, 2015, 2020)) %>% 
-  mutate_at("ansatte", str_replace, "sysselsatte", "")
+  mutate_at("ssgruppe", str_replace, "sysselsatte", "")
 
 df1 <- df1 [!(df1$naering == "Alle næringer"),]
-df1 <- df1 [!(df1$kostnader == "FoU-driftskostnader i alt"),]
+df1 <- df1 [!(df1$svariabel == "FoU-driftskostnader i alt"),]
 df1 <- df1 %>% 
-  pivot_wider(names_from = ansatte, 
+  pivot_wider(names_from = ssgruppe, 
               values_from = verdi )
 df1 <- df1[-c(4,6)]
 df1 <- df1 %>% 
-  pivot_longer(4:8, names_to = "ansatte", 
+  pivot_longer(4:8, names_to = "ssgruppe", 
                values_to = "verdi" )
 
 df1 %>%
-  ggplot(aes(x=verdi, fill=kostnader)) +
+  ggplot(aes(x=verdi, fill=svariabel)) +
   geom_histogram(binwidth = 2) +
   theme_minimal()+
   labs(title="Fordelingen av ulike FoU-kostnader",
        subtitle="Fordelt på type næring (farge) og antall ansatte (høyre y-akse)", 
        x="verdi i milliarder", 
        y = "Count", fill= "Ulike kostnader") +
-  facet_grid(ansatte ~ naering)
+  facet_grid(ssgruppe ~ naering)
 ```

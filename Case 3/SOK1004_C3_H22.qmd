@@ -219,6 +219,9 @@ df <- df %>%
   rename(kpi=statistikkvariabel) %>% 
   filter(dato>as.Date("2010-12-31"))
 df[is.na(df)] <- 0
+
+  
+
 ```
 
 # Oppgave III: Beregn et vektet gjennomsnitt
