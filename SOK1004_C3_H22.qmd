@@ -1,0 +1,544 @@
+---
+title: "SOK-1004,H22, Case3"
+author: "207"
+echo: true
+format: pdf
+output: true
+editor: visual
+warning: false
+---
+
+## Instruksjoner
+
+Denne oppgaven skal løses interaktivt i RStudio ved å legge inn egen kode og kommentarer. Det ferdige dokumentet lagres med kandidatnummeret som navn `[kandidatnummer]_SOK1004_C3_H22.qmd` og lastes opp på deres GitHub-side. Hvis du har kandidatnummer 43, så vil filen hete `43_SOK1004_C3_H22.qmd`. Påse at koden kjører og at dere kan eksportere besvarelsen til pdf. Lever så lenken til GitHub-repositoriumet i Canvas.
+
+## Bakgrunn
+
+Hvor mye har økte kraftpriser bidratt til prisveksten i år? I denne oppgaven skal vi benytte prisdata fra SSB til å besvare dette spørsmålet. Jeg anbefaler dere å lese [Konsumprisindeksen - en levekostnadsindeks](https://www.ssb.no/priser-og-prisindekser/artikler-og-publikasjoner/_attachment/203142?_ts=1495b28c170) av Randi Johannesen, Økonomiske analyser 5/2014.
+
+## Oppgave I: Tolk vekstbidraget
+
+For å forstå øvelsen skal vi først se nærmere på hvordan en prisindeks bygges opp. La $P_{t}$ være verdien til konsumprisindeksen i tid $t$, gitt av et vektet gjennomsnitt av $n\geq1$ priser eller prisindekser
+
+$$
+P_{t}=\sum_{i=1}^{n}v_{i,t}p_{i,t} \hspace{1cm} (1)
+$$\
+
+hvor vektene summerer til én i hver periode \$t\$, $\sum_{i=1}^{n}v_{i,t}=1$. Vi vil se på månedlig KPI på undergruppenivå, hvor $n=93$ og $t$ løper fra januar 1979 til august 2022.
+
+Vi betegner endringen over tolv måneder i KPI ved $P_{t}-P_{t-12} := \Delta P_{t}$, eller
+
+$$
+\Delta P_{t}=\sum_{i=1}^{n} v_{i,t} p_{i,t}-\sum_{i=1}^{n} v_{i,t-12} p_{i,t-12}=\sum_{i=1}^{n} \Delta (v_{i,t} p_{i,t}).\hspace{1cm}(2)
+$$\
+\
+
+Merk at både vektene og prisene kan endre seg fra $t-12$ til $t$. I praksis vil vektene endre seg lite. For å forenkle fremstillingen vil vi anta at $v_{i,t}=v_{i,t-12}$. I tillegg så deler vi uttrykket på $P_{t-12}$, og ganger med $100$. Da har vi
+
+$$
+100\times\frac{\Delta P_{t}}{P_{t}}=100\times\frac{\sum_{i=1}^{n} v_{i,t-12}\Delta p_{i,t}}{P_{t-12}}. \hspace{1cm} (3)
+$$
+
+På venstre side av likhetstegnet har vi prosentvis tolvmåneders endring i konsumprisindeksen, eller inflasjon. På høyre side har vi en sum med $n$ argumenter. Vi fokuserer nå på et vilkårlig element $i$,
+
+$$
+100 \times \frac{v_{i,t-12} \times \Delta p_{i,t}}{P_{t-12}}. \hspace{1cm} (4)
+$$\
+
+Tolk ligning $(4)$. Gi en konkret forklaring på hva tallet representerer.
+
+Likning 4 forteller oss hva vekstbidraget til et vilkårlig element *i* er, av endringen i konsumprisindeksen. Hvis den prosentvise verdien vi får når vi sette inn verdiene i likningen, er 2%, vil vekstbidraget til et vilkårlig element være 2% av den prosentvise veksten til konsumprisen. Hvis inflasjonen eller konsumprisindeksen øker med 4% på et år, og vekstbidraget fra elementet *i* er på 2%, vil de andre elementene eller konsumgruppene stå for de resterende to prosentene av økningen i konsumprisen. Det vilkårlige elementet *i*, representerer én konsumgruppe, av mange konsumgrupper, i beregningen av konsumprisendring.
+
+# Oppgave II: Rydd i data
+
+Vi begynner med å rydde og laste inn pakker.
+
+```{r}
+rm(list=ls()) 
+library(tidyverse)
+library(lubridate)
+library(rjstat)
+library(janitor)
+library(gdata)
+library(httr)
+library(dplyr)
+```
+
+Vi bruker dataene fra [Tabell 0313: Konsumprisindeksen fra SSB](https://www.ssb.no/priser-og-prisindekser/konsumpriser/statistikk/konsumprisindeksen). Jeg laster ned ved hjelp av API. Se [brukerveiledningen](https://www.ssb.no/api/pxwebapi/_/attachment/inline/019c05e0-35ad-4757-87a0-ba7fbf4a68e2:46a164479bc10a67eee4b472cd891f001ca19da5/Api_brukerveiledning.pdf) her.
+
+```{r}
+url <- "https://data.ssb.no/api/v0/no/table/03013/"
+
+query <- '{
+  "query": [
+    {
+      "code": "Konsumgrp",
+      "selection": {
+        "filter": "vs:CoiCop2016niva4",
+        "values": [
+          "01.1.1",
+          "01.1.2",
+          "01.1.3",
+          "01.1.4",
+          "01.1.5",
+          "01.1.6",
+          "01.1.7",
+          "01.1.8",
+          "01.1.9",
+          "01.2.1",
+          "01.2.2",
+          "02.1.1",
+          "02.1.2",
+          "02.1.3",
+          "02.2.0",
+          "03.1.1",
+          "03.1.2",
+          "03.1.3",
+          "03.1.4",
+          "03.2.1",
+          "03.2.2",
+          "04.1.1",
+          "04.1.2",
+          "04.2.1",
+          "04.2.2",
+          "04.3.1",
+          "04.3.2",
+          "04.4.0",
+          "04.5.1",
+          "04.5.3",
+          "04.5.4",
+          "04.5.5",
+          "05.1.1",
+          "05.1.2",
+          "05.2.0",
+          "05.3.1",
+          "05.3.2",
+          "05.3.3",
+          "05.4.0",
+          "05.5.1",
+          "05.5.2",
+          "05.6.1",
+          "05.6.2",
+          "06.1.1",
+          "06.1.2",
+          "06.1.3",
+          "06.2.1",
+          "06.2.2",
+          "06.2.3",
+          "07.1.1",
+          "07.1.2",
+          "07.1.3",
+          "07.2.1",
+          "07.2.2",
+          "07.2.3",
+          "07.2.4",
+          "07.3.1",
+          "07.3.2",
+          "07.3.3",
+          "07.3.4",
+          "08.1.0",
+          "08.2.0",
+          "08.3.0",
+          "09.1.1",
+          "09.1.2",
+          "09.1.3",
+          "09.1.4",
+          "09.1.5",
+          "09.2.1",
+          "09.2.2",
+          "09.3.1",
+          "09.3.2",
+          "09.3.3",
+          "09.3.4",
+          "09.4.1",
+          "09.4.2",
+          "09.5.1",
+          "09.5.2",
+          "09.5.4",
+          "09.6.0",
+          "11.1.1",
+          "11.1.2",
+          "11.2.0",
+          "12.1.1",
+          "12.1.2",
+          "12.1.3",
+          "12.3.1",
+          "12.3.2",
+          "12.4.0",
+          "12.5.2",
+          "12.5.4",
+          "12.6.2",
+          "12.7.0"
+        ]
+      }
+    },
+    {
+      "code": "ContentsCode",
+      "selection": {
+        "filter": "item",
+        "values": [
+          "KpiIndMnd",
+          "KpiVektMnd"
+        ]
+      }
+    }
+  ],
+  "response": {
+    "format": "json-stat2"
+  }
+}'
+
+hent_indeks.tmp <- url %>%
+  POST(body = query, encode = "json")
+
+df <-  hent_indeks.tmp %>%
+  content("text") %>%
+  fromJSONstat() %>%
+  as_tibble()
+```
+
+Følgende kode benytter kommandoen `ymd` fra `lubridate` til å lage en anstendig tidsserie.
+
+```{r}
+df <- df %>%
+separate(måned, 
+         into=c("year", "month"), 
+         sep="M") %>% 
+mutate(dato = ymd(paste(year, month, "1")))
+```
+
+Nå er det deres tur til å rydde. Slett variablene `year` og `month`. Gi variablene formålstjenlige navn. Påse at variablene har riktig format. Fjern data fra før år 2011, slik at vi kan beregne vekst tolvmåneders endring fra 2012. Løs oppgaven slik at du ekstraherer navnene på variablene og verdiene ved hjelp av kode.
+
+**Hint.** Bruk `as.Date()` for å filtrere på datoer.
+
+```{r}
+# løs oppgave II her
+df <- df %>% 
+  subset(select = -c(year, month)) %>% 
+  rename(verdi=value) %>% 
+  rename(kpi=statistikkvariabel) %>% 
+  filter(dato>as.Date("2010-12-31"))
+df[is.na(df)] <- 0
+
+  
+
+```
+
+# Oppgave III: Beregn et vektet gjennomsnitt
+
+Vi skal nå beregne KPI som et vektet gjennomsnitt av konsumgruppene og sammenlign med totalindeksen.
+
+## Oppgave IIIa: Endre verdi på vektene
+
+Del vektene i `df` på 1000, og sjekk at de summerer seg til om lag `1` for hver måned. Hvor store avvik får du?
+
+```{r}
+# besvar oppgave IIIa her
+df_ny <- df %>% 
+  pivot_wider(names_from = konsumgruppe, values_from = verdi)
+df_ny[is.na(df_ny)] <- 0
+
+df_vekt <- df_ny %>%
+  filter(kpi == "Konsumprisindeks (vekter)")
+df_vektene <- df_vekt %>%
+  mutate(Total_pertusen = rowSums(.[3:95]/1000)) %>%
+  relocate("Total_pertusen", .after="dato")
+```
+
+Når vi deler vektene på 1000 og summerer de sammen etter konsumgruppe får vi en verdi som er omtrent lik 1. Avvikene vi får er relativ små. Den minste verdien er 0,9486, mens den største verdien er 0.9809.
+
+## Oppgave IIIb: Beregn prisindeksen fra gruppene med vekter
+
+Beregn en totalindeks hvor dere bruker vektene og verdiene på prisindeks i formel $(1)$ fra oppgave I. Hvordan kan du vite om beregningen er riktig?
+
+```{r}
+# besvar oppgave IIIb her
+
+df_verdi <- df_ny %>%
+  filter(kpi == "Konsumprisindeks (2015=100)")
+
+df_vekt <- select(df_vekt,-kpi,-dato)
+df_vekt <- df_vekt/1000
+df_verdi <- select(df_verdi,-kpi,-dato)
+
+df_totalindeks <- df_vekt * df_verdi
+df_totalindeks <- df_totalindeks %>% 
+  mutate(Total = rowSums(df_totalindeks)) %>%
+  relocate("Total", .before="Brød og kornprodukter")
+
+df_indeks <- select(df_vektene,kpi,dato)
+df_totalindeks <- cbind(df_indeks, df_totalindeks)
+```
+
+```{r}
+url <- "https://data.ssb.no/api/v0/no/table/03013/"
+
+query <- '{
+  "query": [
+    {
+      "code": "Konsumgrp",
+      "selection": {
+        "filter": "vs:CoiCop2016niva1",
+        "values": [
+          "TOTAL"
+        ]
+      }
+    },
+    {
+      "code": "Tid",
+      "selection": {
+        "filter": "item",
+        "values": [
+          "2011M01",
+          "2011M02",
+          "2011M03",
+          "2011M04",
+          "2011M05",
+          "2011M06",
+          "2011M07",
+          "2011M08",
+          "2011M09",
+          "2011M10",
+          "2011M11",
+          "2011M12",
+          "2012M01",
+          "2012M02",
+          "2012M03",
+          "2012M04",
+          "2012M05",
+          "2012M06",
+          "2012M07",
+          "2012M08",
+          "2012M09",
+          "2012M10",
+          "2012M11",
+          "2012M12",
+          "2013M01",
+          "2013M02",
+          "2013M03",
+          "2013M04",
+          "2013M05",
+          "2013M06",
+          "2013M07",
+          "2013M08",
+          "2013M09",
+          "2013M10",
+          "2013M11",
+          "2013M12",
+          "2014M01",
+          "2014M02",
+          "2014M03",
+          "2014M04",
+          "2014M05",
+          "2014M06",
+          "2014M07",
+          "2014M08",
+          "2014M09",
+          "2014M10",
+          "2014M11",
+          "2014M12",
+          "2015M01",
+          "2015M02",
+          "2015M03",
+          "2015M04",
+          "2015M05",
+          "2015M06",
+          "2015M07",
+          "2015M08",
+          "2015M09",
+          "2015M10",
+          "2015M11",
+          "2015M12",
+          "2016M01",
+          "2016M02",
+          "2016M03",
+          "2016M04",
+          "2016M05",
+          "2016M06",
+          "2016M07",
+          "2016M08",
+          "2016M09",
+          "2016M10",
+          "2016M11",
+          "2016M12",
+          "2017M01",
+          "2017M02",
+          "2017M03",
+          "2017M04",
+          "2017M05",
+          "2017M06",
+          "2017M07",
+          "2017M08",
+          "2017M09",
+          "2017M10",
+          "2017M11",
+          "2017M12",
+          "2018M01",
+          "2018M02",
+          "2018M03",
+          "2018M04",
+          "2018M05",
+          "2018M06",
+          "2018M07",
+          "2018M08",
+          "2018M09",
+          "2018M10",
+          "2018M11",
+          "2018M12",
+          "2019M01",
+          "2019M02",
+          "2019M03",
+          "2019M04",
+          "2019M05",
+          "2019M06",
+          "2019M07",
+          "2019M08",
+          "2019M09",
+          "2019M10",
+          "2019M11",
+          "2019M12",
+          "2020M01",
+          "2020M02",
+          "2020M03",
+          "2020M04",
+          "2020M05",
+          "2020M06",
+          "2020M07",
+          "2020M08",
+          "2020M09",
+          "2020M10",
+          "2020M11",
+          "2020M12",
+          "2021M01",
+          "2021M02",
+          "2021M03",
+          "2021M04",
+          "2021M05",
+          "2021M06",
+          "2021M07",
+          "2021M08",
+          "2021M09",
+          "2021M10",
+          "2021M11",
+          "2021M12",
+          "2022M01",
+          "2022M02",
+          "2022M03",
+          "2022M04",
+          "2022M05",
+          "2022M06",
+          "2022M07",
+          "2022M08",
+          "2022M09"
+        ]
+      }
+    }
+  ],
+  "response": {
+    "format": "json-stat2"
+  }
+}'
+
+hent_indeksen.tmp <- url %>%
+  POST(body = query, encode = "json")
+
+df_API <-  hent_indeksen.tmp %>%
+  content("text") %>%
+  fromJSONstat() %>%
+  as_tibble()
+
+df_API <- df_API %>%
+separate(måned, 
+         into=c("year", "month"), 
+         sep="M") %>% 
+mutate(dato = ymd(paste(year, month, 1)))
+df_API <- df_API %>% 
+  subset(select = -c(year, month)) %>%
+  rename(verdi=value) %>% 
+  rename(kpi=statistikkvariabel)
+df_API[is.na(df_API)] <- 0
+df_API <- df_API %>%
+  pivot_wider(names_from = kpi, values_from = verdi)
+```
+
+```{r}
+df_totalindeks %>%
+  ggplot(aes(x=dato, y= Total))+
+    geom_line()+
+  labs(x="dato", y="verdi", title = "Totalindeks for KPI for en undergruppe") +
+  scale_y_continuous(labels = scales::comma)+
+  theme_bw()
+
+df_API %>%
+  ggplot(aes(x=dato, y= `Konsumprisindeks (2015=100)` ))+
+    geom_line()+
+  labs(x="dato", y="verdi", title = "Totalindeks for KPI hentet fra SSB")+
+  scale_y_continuous(labels = scales::comma)+
+  theme_bw()
+```
+
+For å vite om beregningene er riktig kan man se på SSB sin totalindeks for for konsumgruppene. Vi ser at vi får to relativt like grafer, når vi tegner en figur med SSB sine tall, og en figur med tall fra en av undergruppene. Vi får ikke helt samme verdi på y-aksen på begge figurene, noe som kommer av at de konsumgruppene vi har brukt, kun er en undergruppe i den fulle utregningen av KPI, som SSB gjorde.
+
+# Oppgave IV: Beregn kraftprisens bidrag til vekst
+
+Lag en figur som illustrerer vekstbidraget til konsumgruppen "Elektrisitet, inkludert nettleie." Gi figuren en anstendig tolkning.
+
+```{r}
+df_totalindeks1 <- df_totalindeks %>%
+  pivot_longer(4:96,names_to="konsumgruppe", values_to = "verdier")
+df_totalindeks1 <- select(df_totalindeks1, dato, konsumgruppe, verdier)
+df_verdi1 <- df_verdi %>% 
+  pivot_longer(0:93, names_to="konsumgruppe", values_to = "verdi") %>% 
+  mutate(lagverdi=lag(verdi,12)) %>% 
+  filter(konsumgruppe == "Elektrisitet inkludert nettleie") %>% 
+  subset(select= -c(verdi, konsumgruppe))
+df_vekt1 <- select(df_vekt, `Elektrisitet inkludert nettleie`)
+df_lag <- df_vekt1 * df_verdi1
+df_lag <- df_lag %>% 
+  rename(lag_P=`Elektrisitet inkludert nettleie`)
+df_totalindeks1 <- cbind(df_totalindeks1, select(df_lag,`lag_P`))
+df_totalindeks1 <- df_totalindeks1 %>% 
+  filter(konsumgruppe == "Elektrisitet inkludert nettleie") %>% 
+  rename(P = verdier) %>% 
+  mutate(delta_P=P-lag_P)
+df_vekt <- df_vekt %>% 
+  rename(vekt=`Elektrisitet inkludert nettleie`)
+df_totalindeks1 <- cbind(df_totalindeks1,(select(df_vekt, vekt)))
+df_totalindeks1 <- df_totalindeks1 %>% 
+  mutate(lagvekt=lag(vekt,12))
+```
+
+```{r}
+df_total <- df_totalindeks %>%
+  mutate(KPI_prosentvisendring = (100*(Total-dplyr::lag(Total,12))*df_vektene$Total_pertusen)/dplyr::lag(df_totalindeks$Total,12)) 
+df_total1 <- df_totalindeks1 %>% 
+  mutate(kraftpris_prosentvis_endring=(100*(lagvekt*delta_P)/lag_P))
+  
+df_total <- select(df_total, KPI_prosentvisendring)
+df_total <- cbind(df_total1,df_total)
+df_total <- df_total %>%
+  pivot_longer(8:9, names_to = "prosent", values_to="prosentvisendring") %>%
+  filter(dato >= as.Date("2012-01-01"))
+```
+
+```{r}
+df_total %>% 
+  ggplot(aes(x=dato, y=prosentvisendring, color=prosent)) +
+  geom_path()+
+  geom_hline(yintercept = 0)+
+  labs(x="År", y="tolvmåneders endring, prosent",
+         title="Vekstbidraget til konsumgruppene",
+         subtitle="Hva er vekstbidraget til konsumgruppen Elektrisitet, inkludert nettleie?", colour="")+
+  scale_y_continuous(labels = scales::comma)+
+  theme(legend.position = "bottom")
+```
+
+Figuren sammenligner den årlige prosentvise konsumprisveksten med vekstbidraget til konsumgruppen "Elektrisitet, inkludert nettleie". Vi ser at årene fra 2012 er definert som x-akse og at vi har tolvmåneders endring i prosent so, y-akse. Vi ser at fra 2018 til 2022 har vekstbidraget vært høyt for konsumgruppen, mens i perioden før det, var det andre konsumgrupper som hadde mer betydning for konsumprisveksten. Vi ser at konsumprisen var på 4-5% i 2016-2017, mens vekstbidraget til konsumgruppen "Elektrisitet, inkludert nettleie" var omtrent 0. Fra 2018 til 2022 kan vi se at de to grafene følger hverandre relativt tett, som tyder på at veksten i konsumpriser, skyldes at kraftprisen økte.
+
+# Oppgave V
+
+I oppgave IV beregnet vi den direkte effekten av kraftpriser på konsumprisindeksen, gjennom husholdningenes eget forbruk. Diskuter hvorvidt høye kraftpriser indirekte kan bidra til konsumprisvekst.
+
+Det er svært mye som påvirkes av økte kraftpriser. Økte kraftpriser fører i de fleste tilfellene til økte strømpriser for forbrukerne. Dette har stor betydning for både næringslivet og husholdninger. En stor menge varer og tjenester blir dyrere å produsere og transportere. Når strømkostandene går opp, som vi ser ved høye kraftpriser, vil husholdningene få økte utgifter og kostnader, som for eksempel oppvarming av hus. Dette vil føre til at det blir konsumprisvekst, også kalt inflasjon.
+
+Det at kraftprisene går opp, vil som sagt føre til at driftskostnadene øker. Dette betyr at kostander knyttet til produksjon øker, som igjen vil kunne resultere i at marginene til bedrifter går ned. Dette vil i mange tilfeller bidra til at de øker prisen på varer og tjenester, som betyr at vi får konsumprisvekst.

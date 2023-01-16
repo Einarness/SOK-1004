@@ -535,6 +535,10 @@ df_vekter <-  hent_indeks.tmp %>%
 ```
 
 ```{r}
+df_konkurser <- cbind(df_realrente$Realrente, df_konkurser)
+```
+
+```{r}
 df_vekter <- df_vekter %>%
 separate(måned, 
          into=c("year", "month"), 

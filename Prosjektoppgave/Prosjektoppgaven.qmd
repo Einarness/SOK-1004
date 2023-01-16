@@ -95,11 +95,11 @@ Betrakt følgende figurer.
 
 ```{r}
 df_gini %>%
-  filter(year >= 1875) %>%
+  filter(year >= 1820) %>%
   filter(var %in% df_gini_navn[4]) %>%
   ggplot(aes(x=year,y=verdi)) +
   geom_line() +
-  geom_smooth() +
+  geom_smooth(se=FALSE) +
   ylim(0.25,0.75) +
   theme_bw() +
   labs(title = "Gini-koeffisienter for inntektsfordelingen i Norge",
@@ -110,12 +110,30 @@ df_gini %>%
 ```
 
 ```{r}
+df_gini %>%
+  filter(year >= 1900) %>%
+  filter(year <= 1940) %>% 
+  filter(var %in% df_gini_navn[4]) %>%
+  ggplot(aes(x=year,y=verdi)) +
+  geom_line() +
+  geom_smooth(se=FALSE) +
+  ylim(0.52,0.65) +
+  theme_bw() +
+  labs(title = "Gini-koeffisienter for inntektsfordelingen i Norge",
+       subtitle = "1875–2017. Gjennomsnitt av øvre og nedre grense.",
+       y="Gini-koeffisient",
+       x="År",
+       caption = "Kilde: Modalsli, Aaberge og Atkinson (2021)")
+```
+
+```{r}
 df_bnp %>%
-filter(year >= 1875) %>%
+filter(year >= 1900) %>%
+filter(year <= 1930) %>% 
 mutate(BNP = log(BNP)) %>% 
 ggplot(aes(x=year,y=BNP)) +
 geom_line() +
-geom_smooth() +
+geom_smooth(se=FALSE) +
 theme_bw() +
 labs(title = "BNP per person",
      subtitle = "Log faste-2005 kroner. 1875-2017.",
@@ -126,10 +144,26 @@ labs(title = "BNP per person",
 
 ```{r}
 df_bnp %>%
-filter(year >= 1875) %>%
+filter(year >= 1820) %>%
+mutate(BNP = log(BNP)) %>% 
+ggplot(aes(x=year,y=BNP)) +
+geom_line() +
+geom_smooth(se=FALSE) +
+theme_bw() +
+labs(title = "BNP per person",
+     subtitle = "Log faste-2005 kroner. 1875-2017.",
+     y="BNP per person",
+     x="År",
+     caption = "Kilde: Norges Bank")
+```
+
+```{r}
+df_bnp %>%
+filter(year >= 1915) %>%
+filter(year <= 1930) %>%
 ggplot(aes(x=year,y=DLBNP)) +
 geom_line() +
-geom_smooth() +
+geom_smooth(se=FALSE) +
 theme_bw() +
 labs(title = "BNP per person",
      subtitle = "Årlig endring. Log faste-2005 kroner. 1875-2017",
@@ -214,11 +248,11 @@ andeler <- df$var %>%
 
 ```{r}
 df %>% 
-  filter(year %in% c(1900:1930)) %>% 
+  filter(year %in% c(1920:1930)) %>% 
   filter(var %in% andeler[1:10]) %>% 
   mutate(verdi=verdi/(10^5)) %>%
   ggplot(aes(x=year,y=verdi,color=var)) +
-  geom_line(size=1.25) +
+  geom_line(size=1) +
   labs(title = "BNP per person",
        subtitle = "Hundretusener faste 2005-kroner. Fordelt på inntektsdesiler. 1900-1950",
        y = "BNP per person",
@@ -231,7 +265,7 @@ theme_bw()
 
 ```{r}
 df %>% 
-  filter(year %in% c(1900:1930)) %>% 
+  filter(year %in% c(1920:1930)) %>% 
   mutate(verdi=log(verdi)) %>% 
   filter(var %in% andeler[1:10]) %>% 
   
@@ -273,16 +307,7 @@ Her følger fire eksempler på tema dere kan, men ikke nødvendigvis må velge. 
 I besvarelsen skal dere forklare hvorfor dataene er relevante og gi en grundig beskrivelse av deres utvikling. Lengden på besvarelsen skal være på 750 - 1500 ord.
 
 ```{r}
-# message: false
 
-library(readxl)
-cpi <- read_excel("C:/Users/einar/R studio/myrepo/Prosjektoppgave/cpi.xlsx", 
-    sheet = "p1_c3_table_14", range = "A21:C523", 
-    col_types = c("numeric", "text", "skip"))
-```
-
-```{r}
-cpi <- cpi[-c(1:334), ]
 ```
 
 ```{r}

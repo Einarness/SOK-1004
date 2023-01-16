@@ -1,0 +1,56 @@
+```{r}
+rm(list=ls()) 
+```
+
+```{r}
+library(readxl)
+cpi <- read_excel("C:/Users/einar/R studio/myrepo/Prosjektoppgave/cpi.xlsx", 
+    sheet = "p1_c3_table_14", range = "A21:C523", 
+    col_types = c("text", "numeric", "skip"))
+```
+
+```{r}
+cpi <- cpi[-c(1:334), ] #sander er stygg
+```
+
+```{r}
+cpi_total <- cpi %>% 
+  rename(år=Year) %>% 
+  mutate(år=as.integer(år)) %>% 
+  mutate(lag_total=lag(CPI,1)) %>% 
+  mutate(årlig_endring=100*(CPI-lag_total)/CPI)
+cpi_total <- cpi_total[-c(0:50, 92:168), ]
+```
+
+```{r}
+cpi_total %>% 
+  ggplot(aes(x=år, y=årlig_endring))+
+  geom_line()+
+  labs(title="Inflasjon i Norge i perioden 1900-1940",y="Inflasjon")+
+  theme_bw()
+```
+
+```{r}
+library(readxl)
+money_credit <- read_excel("C:/Users/einar/R studio/myrepo/Prosjektoppgave/money_credit.xlsx", 
+    sheet = "Total Credit", range = "A22:Q218", 
+    col_types = c("text", "text", "text", 
+        "text", "text", "skip", "skip", "skip", 
+        "skip", "skip", "skip", "skip", "skip", 
+        "skip", "numeric", "skip", "text"))
+```
+
+```{r}
+money_credit <- money_credit %>% 
+  mutate(år=as.numeric(År)) %>%
+  mutate(Total=as.numeric(`Total loans...7`))
+money_credit <- money_credit[-c(0:81, 122:196), ]
+```
+
+```{r}
+money_credit %>%
+  ggplot(aes(år, y=Total))+
+  geom_line()+
+  scale_y_continuous(labels = scales::comma)+
+  theme_bw()
+```

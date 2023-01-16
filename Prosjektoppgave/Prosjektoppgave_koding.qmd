@@ -1,0 +1,228 @@
+---
+title: "SOK1004, høst 2022, Prosjektoppgave"
+author: "207 og 120"
+format: pdf
+echo: true
+output: true
+editor: visual
+warning: false
+code-fold: true
+---
+
+```{r}
+rm(list=ls()) 
+library(tidyverse)
+library(ggthemes)
+library(openxlsx)
+library(ggpubr)
+library(readxl)
+```
+
+Pari politikk
+
+```{r}
+url <- "https://github.com/Sandermdale/SOK-1004-Eksamen/blob/main/gullverdi%20og%20kroneverdi.xlsx?raw=true"
+df_kroneverdi_gullverdi <- url %>%  
+  read.xlsx() %>% 
+  as_tibble() 
+df_kroneverdi_gullverdi <- df_kroneverdi_gullverdi %>% 
+  mutate(parikurs_kr_per_ounce=`USD(1.USD.per.norske.krone)`*`gullverdi(USD.per.ounce.of.gold)` )
+```
+
+```{r}
+df_kroneverdi_gullverdi <- df_kroneverdi_gullverdi %>%
+  mutate(lag_gull=lag(`gullverdi(USD.per.ounce.of.gold)`,1)) %>% 
+  mutate(lag_krone=lag(`USD(1.USD.per.norske.krone)`,1)) %>% 
+  mutate(lag_parikurs=lag(parikurs_kr_per_ounce,1)) %>% 
+  mutate(årlig_endring_gullpris=100*(`gullverdi(USD.per.ounce.of.gold)`-lag_gull)/`gullverdi(USD.per.ounce.of.gold)`) %>% 
+  mutate(årlig_endring_krone=100*(`USD(1.USD.per.norske.krone)`-lag_krone)/`USD(1.USD.per.norske.krone)`) %>% 
+  mutate(årlig_endring_parikurs=100*(parikurs_kr_per_ounce-lag_parikurs)/parikurs_kr_per_ounce) %>% 
+  mutate(år=as.numeric(år)) %>% 
+  mutate(parikurs_kr_per_0.4032g=parikurs_kr_per_ounce/28.3495231) %>% 
+  mutate(parikurs_kr_per_0.4032g=parikurs_kr_per_0.4032g*0.4032) %>% 
+  mutate(år=as.numeric(år))
+```
+
+```{r}
+df_kroneverdi_gullverdi %>% 
+  filter(år<=1930) %>% 
+  ggplot(aes(x=år, y=parikurs_kr_per_0.4032g))+
+  geom_bar(stat="identity", color="blue",fill="lightblue")+
+  theme_bw()
+```
+
+Realrente og nominell rente
+
+```{r}
+url <- "https://github.com/Sandermdale/SOK-1004-Eksamen/blob/main/Realrente.xlsx?raw=true"
+df_realrente <- url %>%  
+  read.xlsx() %>% 
+  as_tibble() 
+```
+
+```{r}
+df_realrente <- df_realrente %>% 
+  rename(årlig_vekt_kpi=`Årlig.vekst.i.KPI`) %>% 
+  rename(Nominell_rente=`Nominell.rente`)
+df_realrente <- df_realrente[-c(0:64,96:164), ]
+```
+
+```{r}
+url <- "https://github.com/Sandermdale/SOK-1004-Eksamen/blob/main/Pengemengde.xlsx?raw=true"
+  
+df_pengemengde <- url %>%  
+  read.xlsx() %>% 
+  as_tibble
+df_pengemengde <- df_pengemengde %>% 
+  rename(M0_mill_kr=`M0(Mill)`) %>% 
+  rename(M2_mill_kr=`M2.(Mill)`)
+```
+
+```{r}
+#nominell rente i samme graf
+df_pengemengde %>% 
+  filter(År >= 1900) %>% 
+  filter(År <= 1930) %>% 
+  ggplot(aes(x=År, y=M0_mill_kr))+
+  geom_line(aes(x=År, y=M0_mill_kr), color="blue")+
+  theme_bw()
+```
+
+```{r}
+#plotte nominell rente med pengemengde
+```
+
+Inflasjon
+
+```{r}
+url <- "https://github.com/Sandermdale/SOK-1004-Eksamen/blob/main/KPI,Rente%20og%20Inlfasjon.xlsx?raw=true"
+  
+df_inflasjon_kpi <- url %>%  
+  read.xlsx() %>% 
+  as_tibble()
+```
+
+```{r}
+df_inflasjon_kpi <- df_inflasjon_kpi[-c (1:81),] 
+df_inflasjon_kpi <- df_inflasjon_kpi[-c(32:118),]
+df_inflasjon_kpi[is.na(df_inflasjon_kpi)] = 0 
+df_inflasjon_kpi <- df_inflasjon_kpi %>% 
+  rename(År=Year) %>% 
+  mutate(År=as.numeric(År)) %>% 
+  rename(Inflasjon=`Inflation.rate`)
+```
+
+Kombinerer rente og inflasjon
+
+```{r}
+df_realrente <- df_realrente%>%
+  rename("år1" = `År`)
+
+
+df_realrente_inflasjon <- cbind(df_inflasjon_kpi,df_realrente)
+
+df_realrente_inflasjon <- df_realrente_inflasjon%>%
+  select(-c(`Smoothed.inflation.rate`, `årlig_vekt_kpi`, `år1`, `Real.bond.yield`, `Real.loans.rate`,`Wholesale.price.index`,`CPI`, `Real.marginal.rate`, `Real.deposit.rate` ))
+df_realrente_inflasjon <- df_realrente_inflasjon%>%
+  pivot_longer(2:4, names_to = "statistikkvariabel", values_to = "renter og inflasjon")
+```
+
+```{r}
+df_realrente_inflasjon%>%
+  ggplot(aes(x=År, y=`renter og inflasjon`, color=statistikkvariabel))+
+  geom_line()+
+  labs(title = "Renter Og Inflasjon I Norge", 
+       subtitle = "Utviklingen av Inflasjon og Renter. 1900 - 1930",
+       y = "Prosent",
+       x = "År",
+       color =  "",
+       caption = "Kilder: Modalsli, Aaberge og Atkinson (2021), Norges Bank") +
+  theme_bw()
+```
+
+Antall lån
+
+```{r}
+url <- "https://github.com/Sandermdale/SOK-1004-Eksamen/blob/main/totale%20l%C3%A5n.xlsx?raw=true"
+df_loan <- url %>%  
+  read.xlsx() %>% 
+  as_tibble() 
+```
+
+```{r}
+df_loan <- df_loan %>% 
+  mutate(År=as.numeric(År)) %>%
+  rename(Antall_lån=`Total.loans`)
+df_loan <- df_loan[-c(0:81, 113:196), ]
+```
+
+```{r}
+df_loan %>%
+  ggplot(aes(År, y=Antall_lån))+
+  geom_line()+
+  scale_y_continuous(labels = scales::comma)+
+  theme_bw()
+```
+
+```{r}
+#df_realrente
+#df_loan
+#plotte utlån og realrente i samme graf
+```
+
+Antall konkurser
+
+```{r}
+url <- "https://github.com/Sandermdale/SOK-1004-Eksamen/blob/main/Konkurs%201920%20(eksamen-1004).xlsx?raw=true"
+df_konkurser <- url %>%  
+  read.xlsx() %>% 
+  as_tibble() 
+```
+
+```{r}
+df_konkurser <- df_konkurser %>% 
+  rename(Antall_konkurser =`Number.of.bankruptcies.(from.1887)`) %>% 
+  mutate(Year=as.numeric(Year)) %>% 
+  rename(År=Year)
+df_konkurser <- df_konkurser[-c(0:12, 45:74), ]
+```
+
+```{r}
+#endrer antall_konkurs til årlig prosentvis endring
+df_konkurs <- df_konkurser %>% 
+  mutate(lag_konkurs=lag(Antall_konkurser,1)) %>%
+  mutate(Årlig_prosentvis_endring=100*(Antall_konkurser-lag_konkurs)/Antall_konkurser)
+df_konkurser <- df_konkurser[-c(0:1), ]
+```
+
+```{r}
+df_konkurser %>%
+  ggplot(aes(År, y=Antall_konkurser))+
+  geom_line(color="red")+
+  theme_bw()
+```
+
+Kombinerer realrente og konkurser
+
+```{r}
+df_konkurser <- cbind(df_realrente$Realrente, df_konkurser)
+df_konkurser <- df_konkurser %>% 
+  mutate(realrenten=`df_realrente$Realrente`)
+```
+
+```{r}
+df_konkurser %>% 
+  ggplot(aes(x=År, y=Antall_konkurser))+
+  geom_bar(stat="identity", color="blue",fill="lightblue")+
+  geom_line(aes(x=År, y=realrenten*20), 
+            color="red")+
+  scale_y_continuous(sec.axis=sec_axis(trans = ~. /2000,name="Realrente i %",
+labels = scales::percent))+
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        axis.line = element_line(colour = "black"),
+        axis.title.y.right = element_text(color = "red"),
+        axis.line.y.right = element_line(color = "red"),
+        axis.ticks.y.right = element_line(color = "red"))
+```

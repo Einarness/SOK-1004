@@ -1,0 +1,175 @@
+```{r}
+rm(list=ls()) 
+library(tidyverse)
+library(ggthemes)
+library(openxlsx)
+library(ggpubr)
+```
+
+## Antall konkurser
+
+```{r}
+url <- "https://github.com/Sandermdale/SOK-1004-Eksamen/blob/main/Konkurs%201920%20(eksamen-1004).xlsx?raw=true"
+df_konkurser <- url %>%  
+  read.xlsx() %>% 
+  as_tibble() 
+```
+
+```{r}
+df_konkurser <- df_konkurser %>% 
+  rename(Antall_konkurser =`Number.of.bankruptcies.(from.1887)`) %>% 
+  mutate(Year=as.numeric(Year)) %>% 
+  rename(År=Year)
+df_konkurser <- df_konkurser[-c(0:12, 45:74), ]
+```
+
+```{r}
+df_konkurser %>%
+  ggplot(aes(År, y=Antall_konkurser))+
+  geom_line(color="red")+
+  theme_bw()
+```
+
+## Realrente
+
+```{r}
+url <- "https://github.com/Sandermdale/SOK-1004-Eksamen/blob/main/Realrente.xlsx?raw=true"
+df_realrente <- url %>%  
+  read.xlsx() %>% 
+  as_tibble() 
+```
+
+```{r}
+df_realrente <- df_realrente %>% 
+  rename(årlig_vekt_kpi=`Årlig.vekst.i.KPI`) %>% 
+  rename(Nominell_rente=`Nominell.rente`)
+df_realrente <- df_realrente[-c(0:64,96:164), ]
+```
+
+```{r}
+df_realrente %>% 
+  ggplot(aes(x=År, y=Realrente))+
+  geom_line(color="blue")+
+  theme_bw()
+```
+
+```{r}
+df_konkurser <- df_konkurser[-c(0:1), ]
+df_konkurser <- cbind(df_realrente$Realrente, df_konkurser)
+df_konkurser <- df_konkurser %>% 
+  mutate(realrenten=`df_realrente$Realrente`)
+```
+
+```{r}
+df_konkurser %>% 
+  ggplot(aes(x=År, y=Antall_konkurser))+
+  geom_bar(stat="identity", color="blue",fill="lightblue")+
+  geom_line(aes(x=År, y=realrenten*20), 
+            color="red")+
+  scale_y_continuous(sec.axis=sec_axis(trans = ~. /2000,name="Realrente i %",
+labels = scales::percent))+
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        axis.line = element_line(colour = "black"),
+        axis.title.y.right = element_text(color = "red"),
+        axis.line.y.right = element_line(color = "red"),
+        axis.ticks.y.right = element_line(color = "red"))
+```
+
+## Pengemengde - kroneverdi (se hvordan kroneverdien endres av pengemengde)
+
+```{r}
+url <- "https://github.com/Sandermdale/SOK-1004-Eksamen/blob/main/gullverdi%20og%20kroneverdi.xlsx?raw=true"
+df_kroneverdi_gullverdi <- url %>%  
+  read.xlsx() %>% 
+  as_tibble() 
+df_kroneverdi_gullverdi <- df_kroneverdi_gullverdi %>% 
+  mutate(parikurs_kr_per_ounce=`USD(1.USD.per.norske.krone)`*`gullverdi(USD.per.ounce.of.gold)` )
+```
+
+```{r}
+df_1_kroneverdi_gullverdi <- df_kroneverdi_gullverdi %>%
+  mutate(lag_gull=lag(`gullverdi(USD.per.ounce.of.gold)`,1)) %>% 
+  mutate(lag_krone=lag(`USD(1.USD.per.norske.krone)`,1)) %>% 
+  mutate(lag_parikurs=lag(parikurs_kr_per_ounce,1)) %>% 
+  mutate(årlig_endring_gullpris=100*(`gullverdi(USD.per.ounce.of.gold)`-lag_gull)/`gullverdi(USD.per.ounce.of.gold)`) %>% 
+  mutate(årlig_endring_krone=100*(`USD(1.USD.per.norske.krone)`-lag_krone)/`USD(1.USD.per.norske.krone)`) %>% 
+  mutate(årlig_endring_parikurs=100*(parikurs_kr_per_ounce-lag_parikurs)/parikurs_kr_per_ounce) %>% 
+  mutate(år=as.numeric(år)) %>% 
+  mutate(parikurs_kr_per_0.4032g=parikurs_kr_per_ounce/28.3495231) %>% 
+  mutate(parikurs_kr_per_0.4032g=parikurs_kr_per_0.4032g*0.4032) #justerer for inflasjon, basisår 2015=100 
+```
+
+```{r}
+df_1_kroneverdi_gullverdi %>% 
+  filter(år>=1910) %>% 
+  filter(år<=1930) %>% 
+  ggplot()+
+  geom_line(aes(x=år, y=årlig_endring_gullpris), color="red")+
+  geom_line(aes(x=år, y=årlig_endring_krone), color="blue")+
+  theme_bw()
+```
+
+```{r}
+df_1_kroneverdi_gullverdi %>% 
+  filter(år>=1910) %>% 
+  filter(år<=1930) %>% 
+  ggplot()+
+  geom_line(aes(x=år, y=parikurs_kr_per_0.4032g), color="red")+
+  theme_bw()
+```
+
+Kroneverdien under krigen pga. høy etterspørsel etter kroner. Økte pengemende for å få kronen lik gullverdien. gullverdien økte, kroneverdien falt enormt pga av pengemengden mangedoblet seg. Parikurs alt for høy. Måtte øke rentene for å få åengemengden ned, for å få kroneverdien opp. Dette preget økonomien voldsomt.
+
+```{r}
+url <- "https://github.com/Sandermdale/SOK-1004-Eksamen/blob/main/Pengemengde.xlsx?raw=true"
+  
+df_pengemengde <- url %>%  
+  read.xlsx() %>% 
+  as_tibble
+df_pengemengde <- df_pengemengde %>% 
+  rename(M0_mill_kr=`M0(Mill)`) %>% 
+  rename(M2_mill_kr=`M2.(Mill)`)
+```
+
+```{r}
+df_pengemengde %>% 
+  filter(År >= 1900) %>% 
+  filter(År <= 1930) %>% 
+  ggplot(aes(x=År, y=M0_mill_kr))+
+  geom_line(aes(x=År, y=M0_mill_kr), color="blue")+
+  theme_bw()
+```
+
+## kroneverdi - gullverdi (parikurs)
+
+```{r}
+
+```
+
+## parikurs - rente
+
+```{r}
+df_1_kroneverdi_gullverdi <- df_1_kroneverdi_gullverdi[-c(32:42), ]
+df_1_kroneverdi_gullverdi <- cbind(df_1_kroneverdi_gullverdi, df_konkurser$realrenten)
+df_1_kroneverdi_gullverdi <- df_1_kroneverdi_gullverdi %>% 
+  rename(realrenten=`df_konkurser$realrenten`) %>%   
+  mutate(år=as.numeric(år))
+```
+
+```{r}
+df_1_kroneverdi_gullverdi %>% 
+  ggplot(aes(x=år, y=parikurs_kr_per_0.4032g))+
+  geom_bar(stat="identity", color="blue",fill="lightblue")+
+  geom_line(aes(x=år, y=realrenten/15), 
+            color="red")+
+  scale_y_continuous(sec.axis=sec_axis(trans = ~.*15,name="Realrente i %"))+
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        axis.line = element_line(colour = "black"),
+        axis.title.y.right = element_text(color = "red"),
+        axis.line.y.right = element_line(color = "red"),
+        axis.ticks.y.right = element_line(color = "red"))
+```
